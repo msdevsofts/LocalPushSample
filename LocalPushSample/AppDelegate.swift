@@ -7,15 +7,22 @@
 //
 
 import UIKit
+import UserNotifications
 
 @UIApplicationMain
-class AppDelegate: UIResponder, UIApplicationDelegate {
+class AppDelegate: UIResponder, UIApplicationDelegate, UNUserNotificationCenterDelegate {
 
     var window: UIWindow?
 
 
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplicationLaunchOptionsKey: Any]?) -> Bool {
         // Override point for customization after application launch.
+
+        if #available(iOS 10.0, *) {
+            UNUserNotificationCenter.current().delegate = self
+        }
+        LocalNotificationController.requestAuthentication()
+
         return true
     }
 
@@ -42,5 +49,51 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     }
 
 
+    //////////////////////////////////////
+    // UILocalNotification
+    //////////////////////////////////////
+
+    func application(_ application: UIApplication, didReceive notification: UILocalNotification) {
+        print("didReceive")
+    }
+
+    func application(_ application: UIApplication, handleActionWithIdentifier identifier: String?, for notification: UILocalNotification, withResponseInfo responseInfo: [AnyHashable : Any], completionHandler: @escaping () -> Void) {
+        if (identifier == LocalNotificationController.Action.Show.rawValue) {
+            if let userInfo: [String: Any] = notification.userInfo as? [String : Any],
+                let data: String = userInfo["data"] as? String
+            {
+                var title: String? = "LocalNotificationSample"
+                if #available(iOS 8.2, *) {
+                    title = notification.alertTitle
+                }
+
+                UIAlertView(title: title, message: data, delegate: nil, cancelButtonTitle: "OK").show()
+            }
+        }
+        completionHandler()
+    }
+
+
+    //////////////////////////////////////
+    // UNUserNotificationCenterDelegate
+    //////////////////////////////////////
+
+    @available(iOS 10.0, *)
+    func userNotificationCenter(_ center: UNUserNotificationCenter, didReceive response: UNNotificationResponse, withCompletionHandler completionHandler: @escaping () -> Void) {
+        print(response.notification.request.identifier)
+        if (response.notification.request.identifier == LocalNotificationController.Action.Show.rawValue) {
+            if let userInfo: [String: Any] = response.notification.request.content.userInfo as? [String : Any],
+                let data: String = userInfo["data"] as? String
+            {
+                UIAlertView(title: response.notification.request.content.title, message: data, delegate: nil, cancelButtonTitle: "OK").show()
+            }
+        }
+        completionHandler()
+    }
+
+    @available(iOS 10.0, *)
+    func userNotificationCenter(_ center: UNUserNotificationCenter, willPresent notification: UNNotification, withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void) {
+        completionHandler([.alert, .sound])
+    }
 }
 
